@@ -1,5 +1,7 @@
 import math
 import tkinter as tk
+from tkinter import ttk
+from PIL import Image, ImageTk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 from ttkthemes import ThemedTk
@@ -26,7 +28,6 @@ class RotaryDial(tk.Canvas):
         self.callback = callback
         self.step = step
 
-        # Calculate the initial angle based on the initial value
         self.angle = (self.value - self.min_val) / (self.max_val - self.min_val) * 360
         self.draw_dial()
         self.bind("<B1-Motion>", self.on_drag)
@@ -41,7 +42,7 @@ class RotaryDial(tk.Canvas):
             y_start = 100 + 70 * math.sin(angle)
             x_end = 100 + 80 * math.cos(angle)
             y_end = 100 + 80 * math.sin(angle)
-            self.create_line(x_start, y_start, x_end, y_end, fill="black", width=2)
+            self.create_line(x_start, y_start, x_end, y_end, fill="black", width=1)
 
         pointer_angle = math.radians(self.angle - 90)
         pointer_x = 100 + 70 * math.cos(pointer_angle)
@@ -56,12 +57,11 @@ class RotaryDial(tk.Canvas):
         dx = event.x - 100
         dy = event.y - 100
         angle = math.atan2(dy, dx)
-        degrees = (math.degrees(angle) + 450) % 360  # Offset to start at 12 o'clock
+        degrees = (math.degrees(angle) + 450) % 360
         self.angle = degrees
 
-        # Map angle to value
         raw_value = self.min_val + (self.max_val - self.min_val) * (self.angle / 360)
-        self.value = round(raw_value / self.step) * self.step  # Snap to step increments
+        self.value = round(raw_value / self.step) * self.step
         self.value = max(self.min_val, min(self.max_val, self.value))
         self.draw_dial()
         self.callback()
@@ -132,6 +132,9 @@ class PowerSystemSimulator:
         self.vector_canvas = tk.Canvas(self.root, width=400, height=400, bg="#dff9fb")
         self.vector_canvas.pack(side=tk.LEFT, padx=10, pady=10)
 
+        self.image_panel = tk.Label(self.vector_canvas, bg="#dff9fb")
+        self.image_panel.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+
         self.status_frame = tk.Frame(self.root, bg="#f0f0f0")
         self.status_frame.pack(side=tk.RIGHT, padx=10, pady=10, fill=tk.BOTH, expand=True)
 
@@ -139,6 +142,7 @@ class PowerSystemSimulator:
         self.status_display.pack()
 
         self.setup_plot()
+        self.load_synchronous_condenser_image()
 
     def setup_plot(self):
         self.fig = Figure(figsize=(10, 5), dpi=100)
@@ -153,6 +157,21 @@ class PowerSystemSimulator:
 
         self.canvas = FigureCanvasTkAgg(self.fig, master=self.status_frame)
         self.canvas.get_tk_widget().pack()
+
+    def load_synchronous_condenser_image(self):
+        try:
+            image_path = "C:/Users/Jaewook Lee/Downloads/synchronous condenser.png"
+            image = Image.open(image_path)
+            image = image.resize((400, 400), Image.Resampling.LANCZOS)
+            self.photo = ImageTk.PhotoImage(image)  # self.photo를 인스턴스 속성으로 유지
+            self.image_panel.config(image=self.photo)
+            self.image_panel.image = self.photo  # 참조를 유지하여 삭제 방지
+        except FileNotFoundError:
+            self.image_panel.config(text="Image not found", font=("Arial", 10), fg="red")
+        except Exception as e:
+            print(f"Error loading image: {e}")
+            self.image_panel.config(text="Error loading image", font=("Arial", 10), fg="red")
+
 
     def set_static_mode(self):
         self.dynamic_mode = False
@@ -196,13 +215,13 @@ class PowerSystemSimulator:
 
         if power_factor < 0.95:
             if reactive_power > 0:
-                self.status_display.insert(tk.END, "\n⚠️ Low Power Factor (Lagging Load)! Increase Excitation Current to Improve.\n")
+                self.status_display.insert(tk.END, "\n\u26a0 Low Power Factor (Lagging Load)! Increase Excitation Current to Improve.\n")
             elif reactive_power < 0:
-                self.status_display.insert(tk.END, "\n⚠️ Low Power Factor (Leading Load)! Decrease Excitation Current to Improve.\n")
+                self.status_display.insert(tk.END, "\n\u26a0 Low Power Factor (Leading Load)! Decrease Excitation Current to Improve.\n")
         elif power_factor > 0.98:
-            self.status_display.insert(tk.END, "\n⚠️ High Power Factor! Adjust Excitation Current for Stability.\n")
+            self.status_display.insert(tk.END, "\n\u26a0 High Power Factor! Adjust Excitation Current for Stability.\n")
         elif 0.95 <= power_factor <= 0.98:
-            self.status_display.insert(tk.END, "\n✅ Power Factor is Stable.\n")
+            self.status_display.insert(tk.END, "\n\u2705 Power Factor is Stable.\n")
 
         self.status_display.config(state="disabled")
 
